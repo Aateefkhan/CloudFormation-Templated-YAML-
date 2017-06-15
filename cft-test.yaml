@@ -1,0 +1,169 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: EC2 Instance with Public & Private Subnet
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: MyVPC_test
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: us-east-1a
+      Tags:
+      - Key: Name
+        Value: Subnet_testing
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock: 10.0.2.0/24
+      MapPublicIpOnLaunch: 'true'
+      AvailabilityZone: us-east-1b
+      Tags:
+      - Key: Name
+        Value: Subnet_testing_public
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: MyIGW
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: MyRouteTable
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnet
+      RouteTableId:
+        Ref: PublicRouteTable
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: Test-CFT-grp
+      GroupDescription: Test-Sec-Grp
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: 0.0.0.0/0
+
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro
+      AvailabilityZone: us-east-1b
+      ImageId: ami-c58c1dd3
+      KeyName: MyKeyPair
+      Tenancy: default
+      SubnetId:
+        Ref: PublicSubnet
+      SecurityGroupIds:
+      - Ref: InstanceSecurityGroup
+      Tags:
+      - Key: Application
+        Value: MyEc2Instance_testing
+      - Key: Owner-email
+        Value: aateef.aws@gmail.com
+      - Key: donotstop
+        Value: 'false'
+      - Key: projectcode
+        Value: '123456'
+      - Key: Description
+        Value: CFT-Template-Test
+      - Key: Name
+        Value: test-cft
+
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t2.micro 
+      AvailabilityZone: us-east-1b
+      ImageId: ami-c58c1dd3
+      KeyName: MyKeyPair	
+      Tenancy: default
+      SubnetId: 
+        Ref: PublicSubnet
+      SecurityGroupIds:
+      - Ref: InstanceSecurityGroup
+      Tags:
+      - Key: Application
+        Value: MyEc2Instance_testing
+      - Key: Owner-email
+        Value: aateef.aws@gmail.com
+      - Key: Name
+        Value: test-CFT-Private
+    
+  
+
+   
+  
+  ElasticLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs: ''
+      Listeners:
+      - LoadBalancerPort: '80'
+        InstancePort: '80'
+        Protocol: HTTP
+      HealthCheck:
+        Target: HTTP:80/
+        HealthyThreshold: '3'
+        UnhealthyThreshold: '5'
+        Interval: '30'
+        Timeout: '5'
+           
+      
+
+
+
+        
