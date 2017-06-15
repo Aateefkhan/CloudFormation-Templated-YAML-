@@ -1,0 +1,40 @@
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      UserData: !Base64
+        Fn::Join:
+        - ''
+        - [IPAddress=, !Ref 'IPAddress']
+      InstanceType: !Ref 'InstanceType'
+      SecurityGroups: [!Ref 'InstanceSecurityGroup']
+      KeyName: !Ref 'KeyName'
+      ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch,
+          !Ref 'InstanceType', Arch]]
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: !Ref 'SSHLocation'
+  IPAddress:
+    Type: AWS::EC2::EIP
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref 'EC2Instance'
+      EIP: !Ref 'IPAddress'
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref 'EC2Instance'
+  InstanceIPAddress:
+    Description: IP address of the newly created EC2 instance
+    Value: !Ref 'IPAddress'
+
+     
+
+
